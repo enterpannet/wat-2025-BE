@@ -84,50 +84,52 @@ jobs:
             DB_CHANNEL_BINDING_VALUE="${{ secrets.DB_CHANNEL_BINDING || '' }}"
             
             # Create service file
-            sudo tee $SERVICE_FILE > /dev/null <<SERVICEEOF
-          [Unit]
-          Description=Registration System API (mostdata.site)
-          After=network.target postgresql.service
-          Requires=postgresql.service
-          
-          [Service]
-          Type=simple
-          User=www-data
-          Group=www-data
-          WorkingDirectory=/var/www/registration-system/backend
-          ExecStart=/var/www/registration-system/backend/registration-api
-          Restart=always
-          RestartSec=5
-          StandardOutput=journal
-          StandardError=journal
-          
-          # Environment variables
-          Environment="PORT=$PORT_VALUE"
-          Environment="CORS_ORIGIN=$CORS_ORIGIN_VALUE"
-          Environment="DB_HOST=$DB_HOST_VALUE"
-          Environment="DB_PORT=$DB_PORT_VALUE"
-          Environment="DB_USER=$DB_USER_VALUE"
-          Environment="DB_PASSWORD=$DB_PASSWORD_VALUE"
-          Environment="DB_NAME=$DB_NAME_VALUE"
-          Environment="DB_SSL_MODE=$DB_SSL_MODE_VALUE"
-          SERVICEEOF
+            # Note: PostgreSQL is running in Docker, so no systemd service dependency needed
+            {
+              echo "[Unit]"
+              echo "Description=Registration System API (mostdata.site)"
+              echo "After=network.target docker.service"
+              echo "Wants=docker.service"
+              echo ""
+              echo "[Service]"
+              echo "Type=simple"
+              echo "User=www-data"
+              echo "Group=www-data"
+              echo "WorkingDirectory=/var/www/registration-system/backend"
+              echo "ExecStart=/var/www/registration-system/backend/registration-api"
+              echo "Restart=always"
+              echo "RestartSec=5"
+              echo "StandardOutput=journal"
+              echo "StandardError=journal"
+              echo ""
+              echo "# Environment variables"
+              echo "Environment=\"PORT=$PORT_VALUE\""
+              echo "Environment=\"CORS_ORIGIN=$CORS_ORIGIN_VALUE\""
+              echo "Environment=\"DB_HOST=$DB_HOST_VALUE\""
+              echo "Environment=\"DB_PORT=$DB_PORT_VALUE\""
+              echo "Environment=\"DB_USER=$DB_USER_VALUE\""
+              echo "Environment=\"DB_PASSWORD=$DB_PASSWORD_VALUE\""
+              echo "Environment=\"DB_NAME=$DB_NAME_VALUE\""
+              echo "Environment=\"DB_SSL_MODE=$DB_SSL_MODE_VALUE\""
+            } | sudo tee $SERVICE_FILE > /dev/null
             
             if [ -n "$DB_CHANNEL_BINDING_VALUE" ]; then
               echo "Environment=\"DB_CHANNEL_BINDING=$DB_CHANNEL_BINDING_VALUE\"" | sudo tee -a $SERVICE_FILE > /dev/null
             fi
             
-            cat <<'SERVICEEOF' | sudo tee -a $SERVICE_FILE > /dev/null
-          
-          # Security settings
-          NoNewPrivileges=true
-          PrivateTmp=true
-          
-          # Resource limits
-          LimitNOFILE=65536
-          
-          [Install]
-          WantedBy=multi-user.target
-          SERVICEEOF
+            # Append security and install settings
+            {
+              echo ""
+              echo "# Security settings"
+              echo "NoNewPrivileges=true"
+              echo "PrivateTmp=true"
+              echo ""
+              echo "# Resource limits"
+              echo "LimitNOFILE=65536"
+              echo ""
+              echo "[Install]"
+              echo "WantedBy=multi-user.target"
+            } | sudo tee -a $SERVICE_FILE > /dev/null
             
             sudo systemctl daemon-reload
             sudo systemctl enable registration-api
