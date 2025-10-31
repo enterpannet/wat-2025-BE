@@ -6,8 +6,8 @@ on:
       - main
       - master
     paths:
-      - 'backend/**'
-      - '.github/workflows/deploy-backend.yml'
+      - '**'
+      - '!.github/**'
   workflow_dispatch:
 
 jobs:
@@ -22,18 +22,15 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: '1.21'
-        cache-dependency-path: backend/go.sum
+        cache-dependency-path: go.sum
 
     - name: Get dependencies
-      working-directory: ./backend
       run: go mod download
 
     - name: Run tests
-      working-directory: ./backend
       run: go test ./... -v || true
 
     - name: Build Backend
-      working-directory: ./backend
       run: |
         GOOS=linux GOARCH=amd64 go build -o registration-api main.go
         echo "Backend built successfully"
@@ -46,7 +43,7 @@ jobs:
         username: ${{ secrets.BACKEND_USERNAME }}
         key: ${{ secrets.BACKEND_SSH_KEY }}
         port: ${{ secrets.BACKEND_PORT || 22 }}
-        source: "backend/registration-api"
+        source: "registration-api"
         target: "/tmp"
         timeout: 60s
 
@@ -82,19 +79,19 @@ jobs:
           ENV_FILE="/var/www/registration-system/backend/.env"
           
           # สร้าง .env file จาก GitHub Secrets (ถ้ามี)
-          if [ -n "${{ secrets.BACKEND_HOST }}" ]; then
+          if [ -n "${{ secrets.DB_HOST }}" ]; then
             echo "Updating .env file from GitHub Secrets..."
             cat > /tmp/backend.env <<ENVEOF
-            echo "PORT=${{ secrets.PORT || '3000' }}"
-            echo "CORS_ORIGIN=${{ secrets.CORS_ORIGIN || 'https://mostdata.site' }}"
-            echo "DB_HOST=${{ secrets.DB_HOST }}"
-            echo "DB_PORT=${{ secrets.DB_PORT || '5432' }}"
-            echo "DB_USER=${{ secrets.DB_USER }}"
-            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}"
-            echo "DB_NAME=${{ secrets.DB_NAME }}"
-            echo "DB_SSL_MODE=${{ secrets.DB_SSL_MODE || 'disable' }}"
-            echo "DB_CHANNEL_BINDING=${{ secrets.DB_CHANNEL_BINDING }}"
-            ENVEOF
+          PORT=${{ secrets.PORT || '3000' }}
+          CORS_ORIGIN=${{ secrets.CORS_ORIGIN || 'https://mostdata.site' }}
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_PORT=${{ secrets.DB_PORT || '5432' }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_NAME=${{ secrets.DB_NAME }}
+          DB_SSL_MODE=${{ secrets.DB_SSL_MODE || 'disable' }}
+          DB_CHANNEL_BINDING=${{ secrets.DB_CHANNEL_BINDING }}
+          ENVEOF
             sudo mv /tmp/backend.env $ENV_FILE
             sudo chown www-data:www-data $ENV_FILE
             sudo chmod 600 $ENV_FILE
