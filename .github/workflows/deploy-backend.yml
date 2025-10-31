@@ -59,24 +59,88 @@ jobs:
           # Make binary executable
           sudo chmod +x /tmp/registration-api
           
+          # Create production directory if not exists
+          sudo mkdir -p /var/www/registration-system/backend
+          
           # Create backup of old binary
           if [ -f /var/www/registration-system/backend/registration-api ]; then
             sudo cp /var/www/registration-system/backend/registration-api /var/www/registration-system/backend/registration-api.backup.$(date +%Y%m%d_%H%M%S) || true
           fi
           
-          # Stop backend service
-          sudo systemctl stop registration-api || true
+          # Setup systemd service file if it doesn't exist
+          SERVICE_FILE="/etc/systemd/system/registration-api.service"
+          if [ ! -f "$SERVICE_FILE" ]; then
+            echo "⚠️  Service file not found. Creating systemd service file..."
+            
+            # Get environment variables from GitHub Secrets or use defaults
+            PORT_VALUE="${{ secrets.PORT || '3000' }}"
+            CORS_ORIGIN_VALUE="${{ secrets.CORS_ORIGIN || 'https://mostdata.site' }}"
+            DB_HOST_VALUE="${{ secrets.DB_HOST || 'localhost' }}"
+            DB_PORT_VALUE="${{ secrets.DB_PORT || '5432' }}"
+            DB_USER_VALUE="${{ secrets.DB_USER || 'registration_user' }}"
+            DB_PASSWORD_VALUE="${{ secrets.DB_PASSWORD || 'your_secure_password' }}"
+            DB_NAME_VALUE="${{ secrets.DB_NAME || 'registration_db' }}"
+            DB_SSL_MODE_VALUE="${{ secrets.DB_SSL_MODE || 'disable' }}"
+            DB_CHANNEL_BINDING_VALUE="${{ secrets.DB_CHANNEL_BINDING || '' }}"
+            
+            # Create service file
+            sudo tee $SERVICE_FILE > /dev/null <<SERVICEEOF
+          [Unit]
+          Description=Registration System API (mostdata.site)
+          After=network.target postgresql.service
+          Requires=postgresql.service
           
-          # Create production directory if not exists
-          sudo mkdir -p /var/www/registration-system/backend
+          [Service]
+          Type=simple
+          User=www-data
+          Group=www-data
+          WorkingDirectory=/var/www/registration-system/backend
+          ExecStart=/var/www/registration-system/backend/registration-api
+          Restart=always
+          RestartSec=5
+          StandardOutput=journal
+          StandardError=journal
           
-          # Update .env file from GitHub Secrets (if provided)
-          # หมายเหตุ: แนะนำให้ใช้ systemd service file แทน (.env file เป็น option)
-          # ถ้ามี GitHub Secrets สำหรับ env variables จะสร้าง .env file
-          # ถ้าไม่มี จะใช้ environment variables จาก systemd service file
+          # Environment variables
+          Environment="PORT=$PORT_VALUE"
+          Environment="CORS_ORIGIN=$CORS_ORIGIN_VALUE"
+          Environment="DB_HOST=$DB_HOST_VALUE"
+          Environment="DB_PORT=$DB_PORT_VALUE"
+          Environment="DB_USER=$DB_USER_VALUE"
+          Environment="DB_PASSWORD=$DB_PASSWORD_VALUE"
+          Environment="DB_NAME=$DB_NAME_VALUE"
+          Environment="DB_SSL_MODE=$DB_SSL_MODE_VALUE"
+          SERVICEEOF
+            
+            if [ -n "$DB_CHANNEL_BINDING_VALUE" ]; then
+              echo "Environment=\"DB_CHANNEL_BINDING=$DB_CHANNEL_BINDING_VALUE\"" | sudo tee -a $SERVICE_FILE > /dev/null
+            fi
+            
+            cat <<'SERVICEEOF' | sudo tee -a $SERVICE_FILE > /dev/null
+          
+          # Security settings
+          NoNewPrivileges=true
+          PrivateTmp=true
+          
+          # Resource limits
+          LimitNOFILE=65536
+          
+          [Install]
+          WantedBy=multi-user.target
+          SERVICEEOF
+            
+            sudo systemctl daemon-reload
+            sudo systemctl enable registration-api
+            echo "✅ Systemd service file created and enabled"
+          else
+            echo "ℹ️  Service file already exists"
+            # Reload systemd daemon (in case service file was updated manually)
+            sudo systemctl daemon-reload || true
+          fi
+          
+          # Update .env file from GitHub Secrets (optional - for backward compatibility)
+          # Note: Environment variables from systemd service file take precedence
           ENV_FILE="/var/www/registration-system/backend/.env"
-          
-          # สร้าง .env file จาก GitHub Secrets (ถ้ามี)
           if [ -n "${{ secrets.DB_HOST }}" ]; then
             echo "Updating .env file from GitHub Secrets..."
             cat > /tmp/backend.env <<ENVEOF
@@ -94,10 +158,14 @@ jobs:
             sudo chown www-data:www-data $ENV_FILE
             sudo chmod 600 $ENV_FILE
             echo "✅ .env file updated from GitHub Secrets"
+          fi
+          
+          # Stop backend service if running
+          if systemctl is-active --quiet registration-api 2>/dev/null; then
+            echo "Stopping existing service..."
+            sudo systemctl stop registration-api || true
           else
-            echo "ℹ️  No environment variables provided in GitHub Secrets"
-            echo "ℹ️  Using systemd service file environment variables instead"
-            echo "ℹ️  Make sure /etc/systemd/system/registration-api.service has Environment variables set"
+            echo "Service is not running (first deployment?)"
           fi
           
           # Move new binary to production directory
@@ -106,10 +174,8 @@ jobs:
           # Set ownership
           sudo chown root:root /var/www/registration-system/backend/registration-api
           
-          # Reload systemd daemon (in case service file was updated)
-          sudo systemctl daemon-reload || true
-          
-          # Restart backend service
+          # Start backend service
+          echo "Starting backend service..."
           sudo systemctl start registration-api
           
           # Wait for service to start
@@ -123,6 +189,8 @@ jobs:
             echo "✅ Backend deployment completed successfully!"
           else
             echo "❌ Backend service failed to start"
+            echo "Checking logs..."
+            sudo journalctl -u registration-api -n 20 --no-pager || true
             sudo systemctl status registration-api --no-pager
             exit 1
           fi
