@@ -67,78 +67,78 @@ jobs:
             sudo cp /var/www/registration-system/backend/registration-api /var/www/registration-system/backend/registration-api.backup.$(date +%Y%m%d_%H%M%S) || true
           fi
           
-          # Setup systemd service file if it doesn't exist
+          # Setup systemd service file - always update to ensure correct configuration
           SERVICE_FILE="/etc/systemd/system/registration-api.service"
-          if [ ! -f "$SERVICE_FILE" ]; then
-            echo "⚠️  Service file not found. Creating systemd service file..."
-            
-            # Get environment variables from GitHub Secrets or use defaults
-            PORT_VALUE="${{ secrets.PORT || '3000' }}"
-            CORS_ORIGIN_VALUE="${{ secrets.CORS_ORIGIN || 'https://mostdata.site' }}"
-            DB_HOST_VALUE="${{ secrets.DB_HOST || 'localhost' }}"
-            DB_PORT_VALUE="${{ secrets.DB_PORT || '5432' }}"
-            DB_USER_VALUE="${{ secrets.DB_USER || 'registration_user' }}"
-            DB_PASSWORD_VALUE="${{ secrets.DB_PASSWORD || 'your_secure_password' }}"
-            DB_NAME_VALUE="${{ secrets.DB_NAME || 'registration_db' }}"
-            DB_SSL_MODE_VALUE="${{ secrets.DB_SSL_MODE || 'disable' }}"
-            DB_CHANNEL_BINDING_VALUE="${{ secrets.DB_CHANNEL_BINDING || '' }}"
-            
-            # Create service file
-            # Note: PostgreSQL is running in Docker, so no systemd service dependency needed
-            {
-              echo "[Unit]"
-              echo "Description=Registration System API (mostdata.site)"
-              echo "After=network.target docker.service"
-              echo "Wants=docker.service"
-              echo ""
-              echo "[Service]"
-              echo "Type=simple"
-              echo "User=www-data"
-              echo "Group=www-data"
-              echo "WorkingDirectory=/var/www/registration-system/backend"
-              echo "ExecStart=/var/www/registration-system/backend/registration-api"
-              echo "Restart=always"
-              echo "RestartSec=5"
-              echo "StandardOutput=journal"
-              echo "StandardError=journal"
-              echo ""
-              echo "# Environment variables"
-              echo "Environment=\"PORT=$PORT_VALUE\""
-              echo "Environment=\"CORS_ORIGIN=$CORS_ORIGIN_VALUE\""
-              echo "Environment=\"DB_HOST=$DB_HOST_VALUE\""
-              echo "Environment=\"DB_PORT=$DB_PORT_VALUE\""
-              echo "Environment=\"DB_USER=$DB_USER_VALUE\""
-              echo "Environment=\"DB_PASSWORD=$DB_PASSWORD_VALUE\""
-              echo "Environment=\"DB_NAME=$DB_NAME_VALUE\""
-              echo "Environment=\"DB_SSL_MODE=$DB_SSL_MODE_VALUE\""
-            } | sudo tee $SERVICE_FILE > /dev/null
-            
-            if [ -n "$DB_CHANNEL_BINDING_VALUE" ]; then
-              echo "Environment=\"DB_CHANNEL_BINDING=$DB_CHANNEL_BINDING_VALUE\"" | sudo tee -a $SERVICE_FILE > /dev/null
-            fi
-            
-            # Append security and install settings
-            {
-              echo ""
-              echo "# Security settings"
-              echo "NoNewPrivileges=true"
-              echo "PrivateTmp=true"
-              echo ""
-              echo "# Resource limits"
-              echo "LimitNOFILE=65536"
-              echo ""
-              echo "[Install]"
-              echo "WantedBy=multi-user.target"
-            } | sudo tee -a $SERVICE_FILE > /dev/null
-            
-            sudo systemctl daemon-reload
-            sudo systemctl enable registration-api
-            echo "✅ Systemd service file created and enabled"
-          else
-            echo "ℹ️  Service file already exists"
-            # Reload systemd daemon (in case service file was updated manually)
-            sudo systemctl daemon-reload || true
+          
+          # Stop service before updating service file
+          if systemctl is-active --quiet registration-api 2>/dev/null; then
+            echo "Stopping service before updating service file..."
+            sudo systemctl stop registration-api || true
           fi
+          
+          # Get environment variables from GitHub Secrets or use defaults
+          PORT_VALUE="${{ secrets.PORT || '3000' }}"
+          CORS_ORIGIN_VALUE="${{ secrets.CORS_ORIGIN || 'https://mostdata.site' }}"
+          DB_HOST_VALUE="${{ secrets.DB_HOST || 'localhost' }}"
+          DB_PORT_VALUE="${{ secrets.DB_PORT || '5432' }}"
+          DB_USER_VALUE="${{ secrets.DB_USER || 'registration_user' }}"
+          DB_PASSWORD_VALUE="${{ secrets.DB_PASSWORD || 'your_secure_password' }}"
+          DB_NAME_VALUE="${{ secrets.DB_NAME || 'registration_db' }}"
+          DB_SSL_MODE_VALUE="${{ secrets.DB_SSL_MODE || 'disable' }}"
+          DB_CHANNEL_BINDING_VALUE="${{ secrets.DB_CHANNEL_BINDING || '' }}"
+          
+          # Create/update service file
+          # Note: PostgreSQL is running in Docker, so no systemd service dependency needed
+          echo "Updating systemd service file..."
+          {
+            echo "[Unit]"
+            echo "Description=Registration System API (mostdata.site)"
+            echo "After=network.target docker.service"
+            echo "Wants=docker.service"
+            echo ""
+            echo "[Service]"
+            echo "Type=simple"
+            echo "User=www-data"
+            echo "Group=www-data"
+            echo "WorkingDirectory=/var/www/registration-system/backend"
+            echo "ExecStart=/var/www/registration-system/backend/registration-api"
+            echo "Restart=always"
+            echo "RestartSec=5"
+            echo "StandardOutput=journal"
+            echo "StandardError=journal"
+            echo ""
+            echo "# Environment variables"
+            echo "Environment=\"PORT=$PORT_VALUE\""
+            echo "Environment=\"CORS_ORIGIN=$CORS_ORIGIN_VALUE\""
+            echo "Environment=\"DB_HOST=$DB_HOST_VALUE\""
+            echo "Environment=\"DB_PORT=$DB_PORT_VALUE\""
+            echo "Environment=\"DB_USER=$DB_USER_VALUE\""
+            echo "Environment=\"DB_PASSWORD=$DB_PASSWORD_VALUE\""
+            echo "Environment=\"DB_NAME=$DB_NAME_VALUE\""
+            echo "Environment=\"DB_SSL_MODE=$DB_SSL_MODE_VALUE\""
+          } | sudo tee $SERVICE_FILE > /dev/null
+          
+          if [ -n "$DB_CHANNEL_BINDING_VALUE" ]; then
+            echo "Environment=\"DB_CHANNEL_BINDING=$DB_CHANNEL_BINDING_VALUE\"" | sudo tee -a $SERVICE_FILE > /dev/null
+          fi
+          
+          # Append security and install settings
+          {
+            echo ""
+            echo "# Security settings"
+            echo "NoNewPrivileges=true"
+            echo "PrivateTmp=true"
+            echo ""
+            echo "# Resource limits"
+            echo "LimitNOFILE=65536"
+            echo ""
+            echo "[Install]"
+            echo "WantedBy=multi-user.target"
+          } | sudo tee -a $SERVICE_FILE > /dev/null
+          
+          sudo systemctl daemon-reload
+          sudo systemctl enable registration-api
+          echo "✅ Systemd service file updated"
           
           # Update .env file from GitHub Secrets (optional - for backward compatibility)
           # Note: Environment variables from systemd service file take precedence
@@ -162,13 +162,8 @@ jobs:
             echo "✅ .env file updated from GitHub Secrets"
           fi
           
-          # Stop backend service if running
-          if systemctl is-active --quiet registration-api 2>/dev/null; then
-            echo "Stopping existing service..."
-            sudo systemctl stop registration-api || true
-          else
-            echo "Service is not running (first deployment?)"
-          fi
+          # Service was already stopped before updating service file
+          echo "Service is ready to start"
           
           # Move new binary to production directory
           sudo mv /tmp/registration-api /var/www/registration-system/backend/
