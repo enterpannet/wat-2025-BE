@@ -25,8 +25,14 @@ func main() {
 		AppName: "Registration System API",
 	})
 
+	// Get CORS origin from environment, default to localhost for development
+	corsOrigin := os.Getenv("CORS_ORIGIN")
+	if corsOrigin == "" {
+		corsOrigin = "http://localhost:5173"
+	}
+
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:5173",
+		AllowOrigins:     corsOrigin,
 		AllowCredentials: true,
 		AllowHeaders:     "Origin, Content-Type, Accept",
 		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",

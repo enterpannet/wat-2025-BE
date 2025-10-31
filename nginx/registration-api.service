@@ -1,0 +1,38 @@
+[Unit]
+Description=Registration System API (mostdata.site)
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/registration-system/backend
+ExecStart=/var/www/registration-system/backend/registration-api
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Environment variables
+# อัปเดตค่าตามการตั้งค่าจริงของคุณ
+Environment="PORT=3000"
+Environment="CORS_ORIGIN=https://mostdata.site"
+Environment="DB_HOST=localhost"
+Environment="DB_PORT=5432"
+Environment="DB_USER=registration_user"
+Environment="DB_PASSWORD=your_secure_password"
+Environment="DB_NAME=registration_db"
+Environment="DB_SSL_MODE=disable"
+# Environment="DB_CHANNEL_BINDING=prefer"
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Resource limits
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+
