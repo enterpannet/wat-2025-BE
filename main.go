@@ -82,6 +82,11 @@ func main() {
 	// Device Log routes - บันทึกข้อมูลอุปกรณ์ (ดูต้อง login, สร้างไม่ต้อง)
 	admin.Get("/device-logs", handlers.GetDeviceLogs)
 
+	// User Management routes - จัดการผู้ใช้ admin
+	admin.Get("/users", handlers.GetAllUsers)
+	admin.Put("/users/:id", handlers.UpdateUser)
+	admin.Delete("/users/:id", handlers.DeleteUser)
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "3000"

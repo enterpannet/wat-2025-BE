@@ -15,6 +15,7 @@ type User struct {
 	Password string `gorm:"type:varchar(255);not null" json:"-"` // Never send password in JSON
 	FullName string `gorm:"type:varchar(200);not null" json:"full_name"`
 	IsActive bool   `gorm:"default:true" json:"is_active"`
+	Role     string `gorm:"type:varchar(50);default:'registration'" json:"role"` // "registration" or "finance"
 }
 
 type Province struct {

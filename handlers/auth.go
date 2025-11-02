@@ -22,6 +22,7 @@ type RegisterRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	FullName string `json:"full_name"`
+	Role     string `json:"role"` // "registration" or "finance"
 }
 
 type LoginResponse struct {
@@ -34,6 +35,7 @@ type UserResponse struct {
 	ID       uint   `json:"id"`
 	Username string `json:"username"`
 	FullName string `json:"full_name"`
+	Role     string `json:"role"`
 }
 
 // Login handles user login with HTTP-only cookies
@@ -89,6 +91,7 @@ func Login(c *fiber.Ctx) error {
 			ID:       user.ID,
 			Username: user.Username,
 			FullName: user.FullName,
+			Role:     user.Role,
 		},
 	})
 }
@@ -131,6 +134,7 @@ func GetCurrentUser(c *fiber.Ctx) error {
 		ID:       user.ID,
 		Username: user.Username,
 		FullName: user.FullName,
+		Role:     user.Role,
 	})
 }
 
@@ -148,6 +152,18 @@ func RegisterAdmin(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "กรุณากรอกข้อมูลให้ครบถ้วน",
 		})
+	}
+
+	// Validate role
+	if req.Role != "registration" && req.Role != "finance" && req.Role != "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Role ไม่ถูกต้อง (ต้องเป็น 'registration' หรือ 'finance')",
+		})
+	}
+
+	// Set default role if not provided
+	if req.Role == "" {
+		req.Role = "registration"
 	}
 
 	// Check if username already exists
@@ -172,6 +188,7 @@ func RegisterAdmin(c *fiber.Ctx) error {
 		Password: string(hashedPassword),
 		FullName: req.FullName,
 		IsActive: true,
+		Role:     req.Role,
 	}
 
 	if err := database.DB.Create(&user).Error; err != nil {
@@ -187,7 +204,111 @@ func RegisterAdmin(c *fiber.Ctx) error {
 			ID:       user.ID,
 			Username: user.Username,
 			FullName: user.FullName,
+			Role:     user.Role,
 		},
+	})
+}
+
+// GetAllUsers returns all users (admin only feature)
+func GetAllUsers(c *fiber.Ctx) error {
+	var users []models.User
+	if err := database.DB.Find(&users).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "ไม่สามารถดึงข้อมูลผู้ใช้ได้",
+		})
+	}
+
+	// Convert to response format without passwords
+	var userResponses []UserResponse
+	for _, user := range users {
+		userResponses = append(userResponses, UserResponse{
+			ID:       user.ID,
+			Username: user.Username,
+			FullName: user.FullName,
+			Role:     user.Role,
+		})
+	}
+
+	return c.JSON(userResponses)
+}
+
+// UpdateUser updates user information
+func UpdateUser(c *fiber.Ctx) error {
+	userID := c.Params("id")
+
+	// Parse request body
+	type UpdateUserRequest struct {
+		FullName *string `json:"full_name"`
+		IsActive *bool   `json:"is_active"`
+		Role     *string `json:"role"`
+	}
+
+	var req UpdateUserRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "ข้อมูลไม่ถูกต้อง",
+		})
+	}
+
+	// Find user
+	var user models.User
+	if err := database.DB.First(&user, userID).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "ไม่พบข้อมูลผู้ใช้",
+		})
+	}
+
+	// Update fields if provided
+	if req.FullName != nil {
+		user.FullName = *req.FullName
+	}
+	if req.IsActive != nil {
+		user.IsActive = *req.IsActive
+	}
+	if req.Role != nil {
+		// Validate role
+		if *req.Role != "registration" && *req.Role != "finance" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Role ไม่ถูกต้อง (ต้องเป็น 'registration' หรือ 'finance')",
+			})
+		}
+		user.Role = *req.Role
+	}
+
+	if err := database.DB.Save(&user).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "ไม่สามารถอัพเดทข้อมูลผู้ใช้ได้",
+		})
+	}
+
+	return c.JSON(UserResponse{
+		ID:       user.ID,
+		Username: user.Username,
+		FullName: user.FullName,
+		Role:     user.Role,
+	})
+}
+
+// DeleteUser deletes a user
+func DeleteUser(c *fiber.Ctx) error {
+	userID := c.Params("id")
+
+	var user models.User
+	if err := database.DB.First(&user, userID).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "ไม่พบข้อมูลผู้ใช้",
+		})
+	}
+
+	if err := database.DB.Delete(&user).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "ไม่สามารถลบผู้ใช้ได้",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "ลบผู้ใช้สำเร็จ",
 	})
 }
 
