@@ -19,10 +19,10 @@ type LoginRequest struct {
 }
 
 type RegisterRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	FullName string `json:"full_name"`
-	Role     string `json:"role"` // "registration" or "finance"
+	Username string   `json:"username"`
+	Password string   `json:"password"`
+	FullName string   `json:"full_name"`
+	Roles    []string `json:"roles"` // Can have multiple roles: ["registration", "finance"]
 }
 
 type LoginResponse struct {
@@ -32,10 +32,10 @@ type LoginResponse struct {
 }
 
 type UserResponse struct {
-	ID       uint   `json:"id"`
-	Username string `json:"username"`
-	FullName string `json:"full_name"`
-	Role     string `json:"role"`
+	ID       uint     `json:"id"`
+	Username string   `json:"username"`
+	FullName string   `json:"full_name"`
+	Roles    []string `json:"roles"`
 }
 
 // Login handles user login with HTTP-only cookies
@@ -91,7 +91,7 @@ func Login(c *fiber.Ctx) error {
 			ID:       user.ID,
 			Username: user.Username,
 			FullName: user.FullName,
-			Role:     user.Role,
+			Roles:    user.Roles,
 		},
 	})
 }
@@ -134,7 +134,7 @@ func GetCurrentUser(c *fiber.Ctx) error {
 		ID:       user.ID,
 		Username: user.Username,
 		FullName: user.FullName,
-		Role:     user.Role,
+		Roles:    user.Roles,
 	})
 }
 
@@ -154,16 +154,18 @@ func RegisterAdmin(c *fiber.Ctx) error {
 		})
 	}
 
-	// Validate role
-	if req.Role != "registration" && req.Role != "finance" && req.Role != "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Role ไม่ถูกต้อง (ต้องเป็น 'registration' หรือ 'finance')",
-		})
+	// Validate roles if provided
+	for _, role := range req.Roles {
+		if role != "registration" && role != "finance" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Role ไม่ถูกต้อง (ต้องเป็น 'registration' หรือ 'finance')",
+			})
+		}
 	}
 
 	// Set default role if not provided
-	if req.Role == "" {
-		req.Role = "registration"
+	if len(req.Roles) == 0 {
+		req.Roles = []string{"registration"}
 	}
 
 	// Check if username already exists
@@ -188,7 +190,7 @@ func RegisterAdmin(c *fiber.Ctx) error {
 		Password: string(hashedPassword),
 		FullName: req.FullName,
 		IsActive: true,
-		Role:     req.Role,
+		Roles:    req.Roles,
 	}
 
 	if err := database.DB.Create(&user).Error; err != nil {
@@ -204,7 +206,7 @@ func RegisterAdmin(c *fiber.Ctx) error {
 			ID:       user.ID,
 			Username: user.Username,
 			FullName: user.FullName,
-			Role:     user.Role,
+			Roles:    user.Roles,
 		},
 	})
 }
@@ -225,7 +227,7 @@ func GetAllUsers(c *fiber.Ctx) error {
 			ID:       user.ID,
 			Username: user.Username,
 			FullName: user.FullName,
-			Role:     user.Role,
+			Roles:    user.Roles,
 		})
 	}
 
@@ -238,9 +240,9 @@ func UpdateUser(c *fiber.Ctx) error {
 
 	// Parse request body
 	type UpdateUserRequest struct {
-		FullName *string `json:"full_name"`
-		IsActive *bool   `json:"is_active"`
-		Role     *string `json:"role"`
+		FullName *string   `json:"full_name"`
+		IsActive *bool     `json:"is_active"`
+		Roles    *[]string `json:"roles"`
 	}
 
 	var req UpdateUserRequest
@@ -265,14 +267,16 @@ func UpdateUser(c *fiber.Ctx) error {
 	if req.IsActive != nil {
 		user.IsActive = *req.IsActive
 	}
-	if req.Role != nil {
-		// Validate role
-		if *req.Role != "registration" && *req.Role != "finance" {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "Role ไม่ถูกต้อง (ต้องเป็น 'registration' หรือ 'finance')",
-			})
+	if req.Roles != nil {
+		// Validate roles
+		for _, role := range *req.Roles {
+			if role != "registration" && role != "finance" {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"error": "Role ไม่ถูกต้อง (ต้องเป็น 'registration' หรือ 'finance')",
+				})
+			}
 		}
-		user.Role = *req.Role
+		user.Roles = *req.Roles
 	}
 
 	if err := database.DB.Save(&user).Error; err != nil {
@@ -285,7 +289,7 @@ func UpdateUser(c *fiber.Ctx) error {
 		ID:       user.ID,
 		Username: user.Username,
 		FullName: user.FullName,
-		Role:     user.Role,
+		Roles:    user.Roles,
 	})
 }
 
