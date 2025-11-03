@@ -95,22 +95,6 @@ func main() {
 	admin.Put("/users/:id", handlers.UpdateUser)
 	admin.Delete("/users/:id", handlers.DeleteUser)
 
-	// Finance routes - ระบบรายรับรายจ่าย (แยกออกมา) - ต้อง login
-	finance := api.Group("/finance", middleware.AuthRequired)
-	finance.Get("/transactions", handlers.GetTransactions)
-	finance.Get("/transactions/:id", handlers.GetTransaction)
-	finance.Post("/transactions", handlers.CreateTransaction)
-	finance.Put("/transactions/:id", handlers.UpdateTransaction)
-	finance.Delete("/transactions/:id", handlers.DeleteTransaction)
-	finance.Get("/summary", handlers.GetFinanceSummary)
-
-	// Legacy transaction routes - backward compatibility (redirect to finance routes)
-	admin.Get("/transactions", handlers.GetTransactions)
-	admin.Get("/transactions/:id", handlers.GetTransaction)
-	admin.Post("/transactions", handlers.CreateTransaction)
-	admin.Put("/transactions/:id", handlers.UpdateTransaction)
-	admin.Delete("/transactions/:id", handlers.DeleteTransaction)
-
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "3000"
