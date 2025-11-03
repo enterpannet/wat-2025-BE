@@ -4,9 +4,12 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log"
+	"os"
 	"registration-system/database"
 	"registration-system/middleware"
 	"registration-system/models"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -79,7 +82,11 @@ func Login(c *fiber.Ctx) error {
 	cookie.Value = sessionToken
 	cookie.Expires = time.Now().Add(24 * time.Hour)
 	cookie.HTTPOnly = true
-	cookie.Secure = false // Set to true in production with HTTPS
+	
+	// Set Secure flag based on environment (true for HTTPS in production)
+	cookie.Secure = os.Getenv("COOKIE_SECURE") == "true" || 
+		strings.Contains(c.Hostname(), "mostdata.site") ||
+		strings.HasPrefix(c.Protocol(), "https")
 	cookie.SameSite = "Lax"
 
 	c.Cookie(cookie)
@@ -110,6 +117,12 @@ func Logout(c *fiber.Ctx) error {
 	cookie.Value = ""
 	cookie.Expires = time.Now().Add(-1 * time.Hour)
 	cookie.HTTPOnly = true
+	
+	// Set Secure flag based on environment (true for HTTPS in production)
+	cookie.Secure = os.Getenv("COOKIE_SECURE") == "true" || 
+		strings.Contains(c.Hostname(), "mostdata.site") ||
+		strings.HasPrefix(c.Protocol(), "https")
+	cookie.SameSite = "Lax"
 
 	c.Cookie(cookie)
 
@@ -179,6 +192,7 @@ func RegisterAdmin(c *fiber.Ctx) error {
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
+		log.Printf("Error hashing password: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "เกิดข้อผิดพลาดในการสร้างบัญชี",
 		})
@@ -194,6 +208,13 @@ func RegisterAdmin(c *fiber.Ctx) error {
 	}
 
 	if err := database.DB.Create(&user).Error; err != nil {
+		log.Printf("Error creating user: %v", err)
+		// Check if it's a duplicate username error
+		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique") {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว",
+			})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "เกิดข้อผิดพลาดในการสร้างบัญชี",
 		})

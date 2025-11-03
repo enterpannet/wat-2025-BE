@@ -6,6 +6,7 @@ import (
 	"registration-system/database"
 	"registration-system/handlers"
 	"registration-system/middleware"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -31,11 +32,25 @@ func main() {
 		corsOrigin = "http://localhost:5173"
 	}
 
+	// Support multiple origins (comma-separated) or single origin
+	// Fiber CORS accepts comma-separated string for multiple origins
+	// Also add common production origins for mostdata.site
+	allowedOrigins := corsOrigin
+	if !strings.Contains(corsOrigin, "mostdata.site") {
+		// Add production origins if not already included
+		if corsOrigin != "" {
+			allowedOrigins = corsOrigin + ",https://mostdata.site,https://www.mostdata.site"
+		} else {
+			allowedOrigins = "https://mostdata.site,https://www.mostdata.site"
+		}
+	}
+
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     corsOrigin,
+		AllowOrigins:     allowedOrigins,
 		AllowCredentials: true,
-		AllowHeaders:     "Origin, Content-Type, Accept",
-		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With",
+		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+		ExposeHeaders:    "Content-Length, Content-Type",
 	}))
 
 	app.Use(logger.New())
