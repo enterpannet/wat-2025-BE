@@ -80,18 +80,11 @@ func main() {
 	admin.Delete("/registrations/:id", handlers.DeleteRegistration)
 	admin.Put("/registrations/:id/chanting", handlers.UpdateChantingStatus)
 
-	// Transaction routes - รายรับรายจ่าย (ต้อง login)
-	admin.Get("/transactions", handlers.GetTransactions)
-	admin.Get("/transactions/:id", handlers.GetTransaction)
-	admin.Post("/transactions", handlers.CreateTransaction)
-	admin.Put("/transactions/:id", handlers.UpdateTransaction)
-	admin.Delete("/transactions/:id", handlers.DeleteTransaction)
-
 	// Activity Log routes - บันทึกการทำกิจกรรม (ต้อง login)
 	admin.Get("/activity-logs", handlers.GetActivityLogs)
 	admin.Post("/activity-logs", handlers.CreateActivityLog)
 
-	// Summary routes - สรุปข้อมูล (ต้อง login)
+	// Summary routes - สรุปข้อมูลทั้งหมด (ต้อง login) - สำหรับ backward compatibility
 	admin.Get("/summary", handlers.GetSummary)
 
 	// Device Log routes - บันทึกข้อมูลอุปกรณ์ (ดูต้อง login, สร้างไม่ต้อง)
@@ -101,6 +94,22 @@ func main() {
 	admin.Get("/users", handlers.GetAllUsers)
 	admin.Put("/users/:id", handlers.UpdateUser)
 	admin.Delete("/users/:id", handlers.DeleteUser)
+
+	// Finance routes - ระบบรายรับรายจ่าย (แยกออกมา) - ต้อง login
+	finance := api.Group("/finance", middleware.AuthRequired)
+	finance.Get("/transactions", handlers.GetTransactions)
+	finance.Get("/transactions/:id", handlers.GetTransaction)
+	finance.Post("/transactions", handlers.CreateTransaction)
+	finance.Put("/transactions/:id", handlers.UpdateTransaction)
+	finance.Delete("/transactions/:id", handlers.DeleteTransaction)
+	finance.Get("/summary", handlers.GetFinanceSummary)
+
+	// Legacy transaction routes - backward compatibility (redirect to finance routes)
+	admin.Get("/transactions", handlers.GetTransactions)
+	admin.Get("/transactions/:id", handlers.GetTransaction)
+	admin.Post("/transactions", handlers.CreateTransaction)
+	admin.Put("/transactions/:id", handlers.UpdateTransaction)
+	admin.Delete("/transactions/:id", handlers.DeleteTransaction)
 
 	port := os.Getenv("PORT")
 	if port == "" {
