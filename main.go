@@ -93,6 +93,16 @@ func main() {
 	admin.Put("/users/:id", handlers.UpdateUser)
 	admin.Delete("/users/:id", handlers.DeleteUser)
 
+	// Finance routes - ระบบรายรับรายจ่าย (แยกออกมา ไม่ปนกับระบบอื่น)
+	// ใช้ login เดียวกัน แต่แยก path ออกมา
+	finance := api.Group("/finance", middleware.AuthRequired)
+	finance.Get("/transactions", handlers.GetFinanceTransactions)
+	finance.Get("/transactions/:id", handlers.GetFinanceTransaction)
+	finance.Post("/transactions", handlers.CreateFinanceTransaction)
+	finance.Put("/transactions/:id", handlers.UpdateFinanceTransaction)
+	finance.Delete("/transactions/:id", handlers.DeleteFinanceTransaction)
+	finance.Get("/summary", handlers.GetFinanceSummary)
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "3000"
