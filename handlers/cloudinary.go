@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/jpeg"
 	"io"
 	"log"
 	"mime/multipart"
@@ -12,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/disintegration/imaging"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -103,6 +106,56 @@ func UploadImageToCloudinary(c *fiber.Ctx) error {
 		})
 	}
 
+	// Resize and compress image if needed
+	imageData := buf.Bytes()
+	originalSize := len(imageData)
+	log.Printf("Original image size: %d bytes", originalSize)
+
+	// Decode image
+	img, _, err := image.Decode(bytes.NewReader(imageData))
+	if err != nil {
+		log.Printf("Warning: Could not decode image for resizing: %v. Uploading original.", err)
+		// Continue with original image if decode fails
+	} else {
+		// Get image bounds
+		bounds := img.Bounds()
+		width := bounds.Dx()
+		height := bounds.Dy()
+		log.Printf("Image dimensions: %dx%d", width, height)
+
+		// Resize if larger than 1920x1920
+		maxDimension := 1920
+		if width > maxDimension || height > maxDimension {
+			var resizedImg image.Image
+			if width > height {
+				resizedImg = imaging.Resize(img, maxDimension, 0, imaging.Lanczos)
+			} else {
+				resizedImg = imaging.Resize(img, 0, maxDimension, imaging.Lanczos)
+			}
+			img = resizedImg
+			log.Printf("Resized image dimensions: %dx%d", img.Bounds().Dx(), img.Bounds().Dy())
+		}
+
+		// Encode as JPEG with compression
+		var compressedBuf bytes.Buffer
+		err = jpeg.Encode(&compressedBuf, img, &jpeg.Options{Quality: 85})
+		if err != nil {
+			log.Printf("Warning: Could not compress image: %v. Uploading original.", err)
+			// Continue with original image if compression fails
+		} else {
+			compressedSize := compressedBuf.Len()
+			log.Printf("Compressed image size: %d bytes (reduced by %.1f%%)", compressedSize, float64(originalSize-compressedSize)/float64(originalSize)*100)
+			
+			// Use compressed image if it's smaller
+			if compressedSize < originalSize {
+				imageData = compressedBuf.Bytes()
+				log.Printf("Using compressed image")
+			} else {
+				log.Printf("Compressed image is larger, using original")
+			}
+		}
+	}
+
 	// Prepare multipart form data
 	var requestBody bytes.Buffer
 	writer := multipart.NewWriter(&requestBody)
@@ -115,7 +168,7 @@ func UploadImageToCloudinary(c *fiber.Ctx) error {
 			"error": "ไม่สามารถสร้าง form data ได้",
 		})
 	}
-	if _, err := part.Write(buf.Bytes()); err != nil {
+	if _, err := part.Write(imageData); err != nil {
 		log.Printf("Error writing file to form: %v", err)
 		return c.Status(500).JSON(fiber.Map{
 			"error": "ไม่สามารถเขียนไฟล์ได้",
