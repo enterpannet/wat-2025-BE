@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -159,7 +160,9 @@ func UploadImageToCloudinary(c *fiber.Ctx) error {
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	// Execute request
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 30 * time.Second, // Set timeout to 30 seconds
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("Error executing request to Cloudinary: %v", err)
