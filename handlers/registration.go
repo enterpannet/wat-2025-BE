@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"registration-system/database"
 	"registration-system/models"
 	"time"
@@ -156,12 +157,24 @@ func DeleteRegistration(c *fiber.Ctx) error {
 		})
 	}
 
+	// Get user ID for activity log
+	userID := c.Locals("userID").(uint)
+
 	// Soft delete
 	if err := database.DB.Delete(&registration).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"error": "ไม่สามารถลบข้อมูลได้",
 		})
 	}
+
+	// บันทึก Activity Log
+	activityLog := models.ActivityLog{
+		Action:      "ลบข้อมูลการลงทะเบียน",
+		Description: fmt.Sprintf("ลบข้อมูลของ %s (เบอร์โทร: %s)", registration.FullName, registration.PhoneNumber),
+		Module:      "registration",
+		UserID:      userID,
+	}
+	database.DB.Create(&activityLog)
 
 	return c.JSON(fiber.Map{
 		"success": true,
