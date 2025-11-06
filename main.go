@@ -43,11 +43,29 @@ func main() {
 		}
 	}
 
+	// Support multiple origins (comma-separated) or single origin
+	// Fiber CORS accepts comma-separated string for multiple origins
+	// Also add common production origins for mostdata.site
+	allowedOrigins := corsOrigin
+	if !strings.Contains(corsOrigin, "mostdata.site") {
+		// Add production origins if not already included
+		if corsOrigin != "" {
+			allowedOrigins = corsOrigin + ",https://mostdata.site,https://www.mostdata.site"
+		} else {
+			allowedOrigins = "https://mostdata.site,https://www.mostdata.site"
+		}
+	}
+
 	app.Use(cors.New(cors.Config{
+<<<<<<< HEAD
 		AllowOrigins:     strings.Join(corsOrigins, ","),
+=======
+		AllowOrigins:     allowedOrigins,
+>>>>>>> 1f8af0e7b8e76f09469c7cd105804804cbc66f06
 		AllowCredentials: true,
-		AllowHeaders:     "Origin, Content-Type, Accept",
-		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With",
+		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+		ExposeHeaders:    "Content-Length, Content-Type",
 	}))
 
 	app.Use(logger.New())
@@ -77,18 +95,11 @@ func main() {
 	admin.Delete("/registrations/:id", handlers.DeleteRegistration)
 	admin.Put("/registrations/:id/chanting", handlers.UpdateChantingStatus)
 
-	// Transaction routes - รายรับรายจ่าย (ต้อง login)
-	admin.Get("/transactions", handlers.GetTransactions)
-	admin.Get("/transactions/:id", handlers.GetTransaction)
-	admin.Post("/transactions", handlers.CreateTransaction)
-	admin.Put("/transactions/:id", handlers.UpdateTransaction)
-	admin.Delete("/transactions/:id", handlers.DeleteTransaction)
-
 	// Activity Log routes - บันทึกการทำกิจกรรม (ต้อง login)
 	admin.Get("/activity-logs", handlers.GetActivityLogs)
 	admin.Post("/activity-logs", handlers.CreateActivityLog)
 
-	// Summary routes - สรุปข้อมูล (ต้อง login)
+	// Summary routes - สรุปข้อมูลทั้งหมด (ต้อง login) - สำหรับ backward compatibility
 	admin.Get("/summary", handlers.GetSummary)
 
 	// Device Log routes - บันทึกข้อมูลอุปกรณ์ (ดูต้อง login, สร้างไม่ต้อง)
