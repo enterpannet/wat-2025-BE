@@ -161,13 +161,20 @@ func UploadImageToCloudinary(c *fiber.Ctx) error {
 
 	// Execute request
 	client := &http.Client{
-		Timeout: 30 * time.Second, // Set timeout to 30 seconds
+		Timeout: 60 * time.Second, // Increase timeout to 60 seconds for larger files
 	}
+	log.Printf("Starting upload request to Cloudinary...")
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("Error executing request to Cloudinary: %v", err)
+		// Check if it's a timeout error
+		if strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "i/o timeout") {
+			return c.Status(500).JSON(fiber.Map{
+				"error": "การอัพโหลดใช้เวลานานเกินไป กรุณาลองใหม่อีกครั้ง หรือลดขนาดภาพ",
+			})
+		}
 		return c.Status(500).JSON(fiber.Map{
-			"error": fmt.Sprintf("ไม่สามารถอัพโหลดไป Cloudinary ได้: %v", err),
+			"error": fmt.Sprintf("ไม่สามารถเชื่อมต่อกับ Cloudinary ได้: %v", err),
 		})
 	}
 	defer resp.Body.Close()
