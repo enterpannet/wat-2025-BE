@@ -78,7 +78,9 @@ jobs:
           
           # Get environment variables from GitHub Secrets or use defaults
           PORT_VALUE="${{ secrets.PORT || '3000' }}"
-          CORS_ORIGIN_VALUE="${{ secrets.CORS_ORIGIN || 'https://mostdata.site' }}"
+          CORS_ORIGINS_VALUE="${{ secrets.CORS_ORIGINS || 'https://mostdata.site,https://www.mostdata.site' }}"
+          HTTPS_ENABLED_VALUE="${{ secrets.HTTPS_ENABLED || 'true' }}"
+          ENVIRONMENT_VALUE="${{ secrets.ENVIRONMENT || 'production' }}"
           DB_HOST_VALUE="${{ secrets.DB_HOST || 'localhost' }}"
           DB_PORT_VALUE="${{ secrets.DB_PORT || '5432' }}"
           DB_USER_VALUE="${{ secrets.DB_USER || 'registration_user' }}"
@@ -109,7 +111,9 @@ jobs:
             echo ""
             echo "# Environment variables"
             echo "Environment=\"PORT=$PORT_VALUE\""
-            echo "Environment=\"CORS_ORIGIN=$CORS_ORIGIN_VALUE\""
+            echo "Environment=\"CORS_ORIGINS=$CORS_ORIGINS_VALUE\""
+            echo "Environment=\"HTTPS_ENABLED=$HTTPS_ENABLED_VALUE\""
+            echo "Environment=\"ENVIRONMENT=$ENVIRONMENT_VALUE\""
             echo "Environment=\"DB_HOST=$DB_HOST_VALUE\""
             echo "Environment=\"DB_PORT=$DB_PORT_VALUE\""
             echo "Environment=\"DB_USER=$DB_USER_VALUE\""
@@ -147,7 +151,9 @@ jobs:
             echo "Updating .env file from GitHub Secrets..."
             cat > /tmp/backend.env <<ENVEOF
           PORT=${{ secrets.PORT || '3000' }}
-          CORS_ORIGIN=${{ secrets.CORS_ORIGIN || 'https://mostdata.site' }}
+          CORS_ORIGINS=${{ secrets.CORS_ORIGINS || 'https://mostdata.site,https://www.mostdata.site' }}
+          HTTPS_ENABLED=${{ secrets.HTTPS_ENABLED || 'true' }}
+          ENVIRONMENT=${{ secrets.ENVIRONMENT || 'production' }}
           DB_HOST=${{ secrets.DB_HOST }}
           DB_PORT=${{ secrets.DB_PORT || '5432' }}
           DB_USER=${{ secrets.DB_USER }}

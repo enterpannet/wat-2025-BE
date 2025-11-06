@@ -180,7 +180,7 @@ ls -la /var/www/registration-system/frontend/dist/
 
 ```ini
 Environment="PORT=3000"
-Environment="CORS_ORIGIN=https://mostdata.site"
+Environment="CORS_ORIGINS=https://mostdata.site,https://www.mostdata.site"
 Environment="DB_HOST=localhost"
 Environment="DB_PORT=5432"
 Environment="DB_USER=registration_user"

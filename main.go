@@ -6,6 +6,7 @@ import (
 	"registration-system/database"
 	"registration-system/handlers"
 	"registration-system/middleware"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -25,14 +26,25 @@ func main() {
 		AppName: "Registration System API",
 	})
 
-	// Get CORS origin from environment, default to localhost for development
-	corsOrigin := os.Getenv("CORS_ORIGIN")
-	if corsOrigin == "" {
-		corsOrigin = "http://localhost:5173"
+	// Get CORS origins from environment
+	corsOriginsEnv := os.Getenv("CORS_ORIGINS")
+	var corsOrigins []string
+	if corsOriginsEnv == "" {
+		corsOrigins = []string{"http://localhost:5173"} // Default for development
+	} else {
+		// Split comma-separated origins
+		origins := strings.Split(corsOriginsEnv, ",")
+		corsOrigins = make([]string, 0, len(origins))
+		for _, origin := range origins {
+			origin = strings.TrimSpace(origin)
+			if origin != "" {
+				corsOrigins = append(corsOrigins, origin)
+			}
+		}
 	}
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     corsOrigin,
+		AllowOrigins:     strings.Join(corsOrigins, ","),
 		AllowCredentials: true,
 		AllowHeaders:     "Origin, Content-Type, Accept",
 		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",

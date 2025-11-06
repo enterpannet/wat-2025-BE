@@ -81,7 +81,7 @@ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 ```bash
 # ใน systemd service file หรือ .env
 PORT=3000
-CORS_ORIGIN=https://mostdata.site
+CORS_ORIGINS=https://mostdata.site,https://www.mostdata.site
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=your_db_user

@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"registration-system/database"
 	"registration-system/middleware"
 	"registration-system/models"
@@ -79,7 +80,8 @@ func Login(c *fiber.Ctx) error {
 	cookie.Value = sessionToken
 	cookie.Expires = time.Now().Add(24 * time.Hour)
 	cookie.HTTPOnly = true
-	cookie.Secure = false // Set to true in production with HTTPS
+	// Set Secure flag based on environment (true for HTTPS in production)
+	cookie.Secure = os.Getenv("ENVIRONMENT") == "production" || os.Getenv("HTTPS_ENABLED") == "true"
 	cookie.SameSite = "Lax"
 
 	c.Cookie(cookie)
@@ -110,6 +112,7 @@ func Logout(c *fiber.Ctx) error {
 	cookie.Value = ""
 	cookie.Expires = time.Now().Add(-1 * time.Hour)
 	cookie.HTTPOnly = true
+	cookie.Secure = os.Getenv("ENVIRONMENT") == "production" || os.Getenv("HTTPS_ENABLED") == "true"
 
 	c.Cookie(cookie)
 
