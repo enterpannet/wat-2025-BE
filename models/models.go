@@ -79,12 +79,12 @@ type Transaction struct {
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
-	Type        string    `gorm:"type:varchar(20);not null" json:"type"` // "income" or "expense"
-	Amount      float64   `gorm:"type:decimal(15,2);not null" json:"amount"`
-	Description string    `gorm:"type:text;not null" json:"description"`
-	Date        time.Time `gorm:"not null" json:"date"`
-	Category    string    `gorm:"type:varchar(100)" json:"category"` // หมวดหมู่ เช่น "บุญบารมี", "ค่าใช้จ่ายทั่วไป"
-	ImageURL    string    `gorm:"type:text" json:"image_url"`        // URL ของภาพที่อัพโหลดไป Cloudinary
+	Type        string      `gorm:"type:varchar(20);not null" json:"type"` // "income" or "expense"
+	Amount      float64     `gorm:"type:decimal(15,2);not null" json:"amount"`
+	Description string      `gorm:"type:text;not null" json:"description"`
+	Date        time.Time   `gorm:"not null" json:"date"`
+	Category    string      `gorm:"type:varchar(100)" json:"category"` // หมวดหมู่ เช่น "บุญบารมี", "ค่าใช้จ่ายทั่วไป"
+	ImageURLs   StringArray `gorm:"type:text[]" json:"image_urls"`     // URLs ของภาพที่อัพโหลดไป Cloudinary (สูงสุด 5 ภาพ)
 
 	// Relationship
 	UserID uint `gorm:"not null" json:"user_id"`
