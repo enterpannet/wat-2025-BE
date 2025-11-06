@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"bytes"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"image"
@@ -11,6 +13,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,6 +26,29 @@ import (
 type CloudinaryUploadResponse struct {
 	SecureURL string `json:"secure_url"`
 	PublicID  string `json:"public_id"`
+}
+
+// generateCloudinarySignature - Generate signature for Cloudinary signed upload
+func generateCloudinarySignature(params map[string]string, apiSecret string) string {
+	// Sort parameters by key
+	keys := make([]string, 0, len(params))
+	for k := range params {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	// Build signature string
+	var signatureParts []string
+	for _, k := range keys {
+		if k != "file" && k != "api_key" {
+			signatureParts = append(signatureParts, fmt.Sprintf("%s=%s", k, params[k]))
+		}
+	}
+	signatureString := strings.Join(signatureParts, "&") + apiSecret
+
+	// Generate SHA-1 hash
+	hash := sha1.Sum([]byte(signatureString))
+	return hex.EncodeToString(hash[:])
 }
 
 // UploadImageToCloudinary - Upload image to Cloudinary
@@ -175,61 +202,145 @@ func UploadImageToCloudinary(c *fiber.Ctx) error {
 		})
 	}
 
-	// Add upload preset (use unsigned upload preset)
-	uploadPreset := os.Getenv("CLOUDINARY_UPLOAD_PRESET")
-	if uploadPreset == "" {
-		log.Println("Warning: CLOUDINARY_UPLOAD_PRESET not set, using default")
-		uploadPreset = "unsigned" // Default preset
-	}
-	log.Printf("Using upload preset: %s", uploadPreset)
-	writer.WriteField("upload_preset", uploadPreset)
+	// Get Cloudinary credentials
+	cloudName := os.Getenv("CLOUDINARY_CLOUD_NAME")
+	apiKey := os.Getenv("CLOUDINARY_API_KEY")
+	apiSecret := os.Getenv("CLOUDINARY_API_SECRET")
 
-	// Add folder
+	if cloudName == "" {
+		log.Println("Error: CLOUDINARY_CLOUD_NAME not set")
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Cloudinary ไม่ได้ตั้งค่า (CLOUDINARY_CLOUD_NAME)",
+		})
+	}
+	if apiKey == "" {
+		log.Println("Error: CLOUDINARY_API_KEY not set")
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Cloudinary ไม่ได้ตั้งค่า (CLOUDINARY_API_KEY)",
+		})
+	}
+	if apiSecret == "" {
+		log.Println("Error: CLOUDINARY_API_SECRET not set")
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Cloudinary ไม่ได้ตั้งค่า (CLOUDINARY_API_SECRET)",
+		})
+	}
+
+	log.Printf("Using Cloudinary cloud name: %s", cloudName)
+	log.Printf("Using Cloudinary API key: %s", apiKey)
+
+	// Generate timestamp
+	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+
+	// Prepare parameters for signature
+	params := map[string]string{
+		"timestamp": timestamp,
+		"folder":    "finance-transactions",
+	}
+
+	// Generate signature
+	signature := generateCloudinarySignature(params, apiSecret)
+	log.Printf("Generated signature: %s", signature)
+
+	// Add API key, timestamp, signature, and folder
+	writer.WriteField("api_key", apiKey)
+	writer.WriteField("timestamp", timestamp)
+	writer.WriteField("signature", signature)
 	writer.WriteField("folder", "finance-transactions")
 
 	writer.Close()
 
-	// Get Cloudinary credentials
-	cloudName := os.Getenv("CLOUDINARY_CLOUD_NAME")
-	if cloudName == "" {
-		log.Println("Error: CLOUDINARY_CLOUD_NAME not set")
-		return c.Status(500).JSON(fiber.Map{
-			"error": "Cloudinary ไม่ได้ตั้งค่า",
-		})
-	}
-	log.Printf("Using Cloudinary cloud name: %s", cloudName)
-
 	// Upload to Cloudinary
 	uploadURL := fmt.Sprintf("https://api.cloudinary.com/v1_1/%s/image/upload", cloudName)
 	log.Printf("Uploading to: %s", uploadURL)
-	
-	req, err := http.NewRequest("POST", uploadURL, &requestBody)
-	if err != nil {
-		log.Printf("Error creating request: %v", err)
-		return c.Status(500).JSON(fiber.Map{
-			"error": "ไม่สามารถสร้าง request ได้",
-		})
-	}
-	req.Header.Set("Content-Type", writer.FormDataContentType())
 
-	// Execute request
+	// Execute request with retry mechanism
 	client := &http.Client{
-		Timeout: 60 * time.Second, // Increase timeout to 60 seconds for larger files
+		Timeout: 30 * time.Second, // Use 30 seconds timeout per attempt
 	}
-	log.Printf("Starting upload request to Cloudinary...")
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Printf("Error executing request to Cloudinary: %v", err)
+	
+	var resp *http.Response
+	maxRetries := 3
+	var lastErr error
+	
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		log.Printf("Starting upload request to Cloudinary (attempt %d/%d)...", attempt, maxRetries)
+		
+		// Recreate request body for each retry (it gets consumed)
+		var retryBody bytes.Buffer
+		retryWriter := multipart.NewWriter(&retryBody)
+		
+		// Re-add file
+		retryPart, partErr := retryWriter.CreateFormFile("file", file.Filename)
+		if partErr != nil {
+			log.Printf("Error creating retry form file: %v", partErr)
+			lastErr = partErr
+			break
+		}
+		if _, partErr := retryPart.Write(imageData); partErr != nil {
+			log.Printf("Error writing retry file: %v", partErr)
+			lastErr = partErr
+			break
+		}
+		
+		// Regenerate timestamp and signature for retry
+		retryTimestamp := strconv.FormatInt(time.Now().Unix(), 10)
+		retryParams := map[string]string{
+			"timestamp": retryTimestamp,
+			"folder":    "finance-transactions",
+		}
+		retrySignature := generateCloudinarySignature(retryParams, apiSecret)
+		
+		retryWriter.WriteField("api_key", apiKey)
+		retryWriter.WriteField("timestamp", retryTimestamp)
+		retryWriter.WriteField("signature", retrySignature)
+		retryWriter.WriteField("folder", "finance-transactions")
+		retryWriter.Close()
+		
+		// Create new request
+		retryReq, reqErr := http.NewRequest("POST", uploadURL, &retryBody)
+		if reqErr != nil {
+			log.Printf("Error creating retry request: %v", reqErr)
+			lastErr = reqErr
+			break
+		}
+		retryReq.Header.Set("Content-Type", retryWriter.FormDataContentType())
+		
+		resp, lastErr = client.Do(retryReq)
+		if lastErr == nil {
+			// Success!
+			break
+		}
+		
+		log.Printf("Attempt %d failed: %v", attempt, lastErr)
+		
+		// If not the last attempt, wait before retrying
+		if attempt < maxRetries {
+			waitTime := time.Duration(attempt) * time.Second
+			log.Printf("Waiting %v before retry...", waitTime)
+			time.Sleep(waitTime)
+		}
+	}
+	
+	if lastErr != nil {
+		log.Printf("Error executing request to Cloudinary after %d attempts: %v", maxRetries, lastErr)
 		// Check if it's a timeout error
-		if strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "i/o timeout") {
+		if strings.Contains(lastErr.Error(), "timeout") || strings.Contains(lastErr.Error(), "i/o timeout") {
 			return c.Status(500).JSON(fiber.Map{
-				"error": "การอัพโหลดใช้เวลานานเกินไป กรุณาลองใหม่อีกครั้ง หรือลดขนาดภาพ",
+				"error": "ไม่สามารถเชื่อมต่อกับ Cloudinary ได้ (timeout) กรุณาตรวจสอบ network connection หรือลองใหม่อีกครั้ง",
 			})
 		}
 		return c.Status(500).JSON(fiber.Map{
-			"error": fmt.Sprintf("ไม่สามารถเชื่อมต่อกับ Cloudinary ได้: %v", err),
+			"error": fmt.Sprintf("ไม่สามารถเชื่อมต่อกับ Cloudinary ได้: %v", lastErr),
 		})
 	}
+	
+	if resp == nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error": "ไม่ได้รับ response จาก Cloudinary",
+		})
+	}
+	
 	defer resp.Body.Close()
 
 	// Read response body
@@ -274,4 +385,5 @@ func UploadImageToCloudinary(c *fiber.Ctx) error {
 		"public_id": cloudinaryResp.PublicID,
 	})
 }
+
 
