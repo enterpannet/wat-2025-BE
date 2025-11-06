@@ -102,7 +102,8 @@ func main() {
 	finance.Put("/transactions/:id", handlers.UpdateFinanceTransaction)
 	finance.Delete("/transactions/:id", handlers.DeleteFinanceTransaction)
 	finance.Get("/summary", handlers.GetFinanceSummary)
-	finance.Post("/upload-image", handlers.UploadImageToCloudinary) // Upload image to Cloudinary
+	finance.Post("/upload-image", handlers.UploadImageToCloudinary)         // Upload image to Cloudinary (fallback)
+	finance.Get("/upload-signature", handlers.GetCloudinaryUploadSignature) // Get signature for direct upload
 
 	port := os.Getenv("PORT")
 	if port == "" {

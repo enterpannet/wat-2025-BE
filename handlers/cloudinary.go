@@ -51,6 +51,41 @@ func generateCloudinarySignature(params map[string]string, apiSecret string) str
 	return hex.EncodeToString(hash[:])
 }
 
+// GetCloudinaryUploadSignature - Get signature for direct upload from frontend
+func GetCloudinaryUploadSignature(c *fiber.Ctx) error {
+	// Get Cloudinary credentials
+	cloudName := os.Getenv("CLOUDINARY_CLOUD_NAME")
+	apiKey := os.Getenv("CLOUDINARY_API_KEY")
+	apiSecret := os.Getenv("CLOUDINARY_API_SECRET")
+
+	if cloudName == "" || apiKey == "" || apiSecret == "" {
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Cloudinary ไม่ได้ตั้งค่า",
+		})
+	}
+
+	// Generate timestamp
+	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+
+	// Prepare parameters for signature
+	params := map[string]string{
+		"timestamp": timestamp,
+		"folder":    "finance-transactions",
+	}
+
+	// Generate signature
+	signature := generateCloudinarySignature(params, apiSecret)
+
+	return c.JSON(fiber.Map{
+		"cloud_name": cloudName,
+		"api_key":    apiKey,
+		"timestamp":  timestamp,
+		"signature":  signature,
+		"folder":     "finance-transactions",
+		"upload_url": fmt.Sprintf("https://api.cloudinary.com/v1_1/%s/image/upload", cloudName),
+	})
+}
+
 // UploadImageToCloudinary - Upload image to Cloudinary
 func UploadImageToCloudinary(c *fiber.Ctx) error {
 	// Get file from form
