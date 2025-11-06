@@ -83,16 +83,15 @@ func Login(c *fiber.Ctx) error {
 	cookie.Value = sessionToken
 	cookie.Expires = time.Now().Add(24 * time.Hour)
 	cookie.HTTPOnly = true
-<<<<<<< HEAD
-	// Set Secure flag based on environment (true for HTTPS in production)
-	cookie.Secure = os.Getenv("ENVIRONMENT") == "production" || os.Getenv("HTTPS_ENABLED") == "true"
-=======
+
+	
+
 	
 	// Set Secure flag based on environment (true for HTTPS in production)
 	cookie.Secure = os.Getenv("COOKIE_SECURE") == "true" || 
 		strings.Contains(c.Hostname(), "mostdata.site") ||
 		strings.HasPrefix(c.Protocol(), "https")
->>>>>>> 1f8af0e7b8e76f09469c7cd105804804cbc66f06
+
 	cookie.SameSite = "Lax"
 
 	c.Cookie(cookie)
@@ -123,16 +122,16 @@ func Logout(c *fiber.Ctx) error {
 	cookie.Value = ""
 	cookie.Expires = time.Now().Add(-1 * time.Hour)
 	cookie.HTTPOnly = true
-<<<<<<< HEAD
+
 	cookie.Secure = os.Getenv("ENVIRONMENT") == "production" || os.Getenv("HTTPS_ENABLED") == "true"
-=======
+
 	
 	// Set Secure flag based on environment (true for HTTPS in production)
 	cookie.Secure = os.Getenv("COOKIE_SECURE") == "true" || 
 		strings.Contains(c.Hostname(), "mostdata.site") ||
 		strings.HasPrefix(c.Protocol(), "https")
 	cookie.SameSite = "Lax"
->>>>>>> 1f8af0e7b8e76f09469c7cd105804804cbc66f06
+
 
 	c.Cookie(cookie)
 

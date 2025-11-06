@@ -43,25 +43,8 @@ func main() {
 		}
 	}
 
-	// Support multiple origins (comma-separated) or single origin
-	// Fiber CORS accepts comma-separated string for multiple origins
-	// Also add common production origins for mostdata.site
-	allowedOrigins := corsOrigin
-	if !strings.Contains(corsOrigin, "mostdata.site") {
-		// Add production origins if not already included
-		if corsOrigin != "" {
-			allowedOrigins = corsOrigin + ",https://mostdata.site,https://www.mostdata.site"
-		} else {
-			allowedOrigins = "https://mostdata.site,https://www.mostdata.site"
-		}
-	}
-
 	app.Use(cors.New(cors.Config{
-<<<<<<< HEAD
 		AllowOrigins:     strings.Join(corsOrigins, ","),
-=======
-		AllowOrigins:     allowedOrigins,
->>>>>>> 1f8af0e7b8e76f09469c7cd105804804cbc66f06
 		AllowCredentials: true,
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With",
 		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS, PATCH",
