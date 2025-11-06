@@ -81,6 +81,8 @@ jobs:
           CORS_ORIGINS_VALUE="${{ secrets.CORS_ORIGINS || 'https://mostdata.site,https://www.mostdata.site' }}"
           HTTPS_ENABLED_VALUE="${{ secrets.HTTPS_ENABLED || 'true' }}"
           ENVIRONMENT_VALUE="${{ secrets.ENVIRONMENT || 'production' }}"
+          CLOUDINARY_CLOUD_NAME_VALUE="${{ secrets.CLOUDINARY_CLOUD_NAME || '' }}"
+          CLOUDINARY_UPLOAD_PRESET_VALUE="${{ secrets.CLOUDINARY_UPLOAD_PRESET || 'unsigned' }}"
           DB_HOST_VALUE="${{ secrets.DB_HOST || 'localhost' }}"
           DB_PORT_VALUE="${{ secrets.DB_PORT || '5432' }}"
           DB_USER_VALUE="${{ secrets.DB_USER || 'registration_user' }}"
@@ -88,6 +90,8 @@ jobs:
           DB_NAME_VALUE="${{ secrets.DB_NAME || 'registration_db' }}"
           DB_SSL_MODE_VALUE="${{ secrets.DB_SSL_MODE || 'disable' }}"
           DB_CHANNEL_BINDING_VALUE="${{ secrets.DB_CHANNEL_BINDING || '' }}"
+          CLOUDINARY_CLOUD_NAME_VALUE="${{ secrets.CLOUDINARY_CLOUD_NAME || 'dpncsdazc' }}"
+          CLOUDINARY_UPLOAD_PRESET_VALUE="${{ secrets.CLOUDINARY_UPLOAD_PRESET || 'doc1234' }}"
           
           # Create/update service file
           # Note: PostgreSQL is running in Docker, so no systemd service dependency needed
@@ -114,6 +118,12 @@ jobs:
             echo "Environment=\"CORS_ORIGINS=$CORS_ORIGINS_VALUE\""
             echo "Environment=\"HTTPS_ENABLED=$HTTPS_ENABLED_VALUE\""
             echo "Environment=\"ENVIRONMENT=$ENVIRONMENT_VALUE\""
+            if [ -n "$CLOUDINARY_CLOUD_NAME_VALUE" ]; then
+              echo "Environment=\"CLOUDINARY_CLOUD_NAME=$CLOUDINARY_CLOUD_NAME_VALUE\""
+            fi
+            if [ -n "$CLOUDINARY_UPLOAD_PRESET_VALUE" ]; then
+              echo "Environment=\"CLOUDINARY_UPLOAD_PRESET=$CLOUDINARY_UPLOAD_PRESET_VALUE\""
+            fi
             echo "Environment=\"DB_HOST=$DB_HOST_VALUE\""
             echo "Environment=\"DB_PORT=$DB_PORT_VALUE\""
             echo "Environment=\"DB_USER=$DB_USER_VALUE\""

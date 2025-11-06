@@ -74,48 +74,49 @@ type Registration struct {
 
 // Transaction - รายรับรายจ่าย
 type Transaction struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+	ID        uint           `gorm:"primaryKey" json:"id"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
 	Type        string    `gorm:"type:varchar(20);not null" json:"type"` // "income" or "expense"
 	Amount      float64   `gorm:"type:decimal(15,2);not null" json:"amount"`
 	Description string    `gorm:"type:text;not null" json:"description"`
 	Date        time.Time `gorm:"not null" json:"date"`
 	Category    string    `gorm:"type:varchar(100)" json:"category"` // หมวดหมู่ เช่น "บุญบารมี", "ค่าใช้จ่ายทั่วไป"
+	ImageURL    string    `gorm:"type:text" json:"image_url"`        // URL ของภาพที่อัพโหลดไป Cloudinary
 
 	// Relationship
-	UserID      uint      `gorm:"not null" json:"user_id"`
-	User        User      `json:"user,omitempty"`
+	UserID uint `gorm:"not null" json:"user_id"`
+	User   User `json:"user,omitempty"`
 }
 
 // ActivityLog - บันทึกการทำกิจกรรม (ต้อง login - รู้ว่าใครทำ)
 type ActivityLog struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	CreatedAt time.Time `json:"created_at"`
 
-	Action      string    `gorm:"type:varchar(200);not null" json:"action"` // สิ่งที่ทำ เช่น "เพิ่มรายรับ", "แก้ไขข้อมูล", "ลบรายการ"
-	Description string    `gorm:"type:text" json:"description"` // รายละเอียดเพิ่มเติม
-	Module      string    `gorm:"type:varchar(50)" json:"module"` // โมดูล เช่น "transaction", "registration"
+	Action      string `gorm:"type:varchar(200);not null" json:"action"` // สิ่งที่ทำ เช่น "เพิ่มรายรับ", "แก้ไขข้อมูล", "ลบรายการ"
+	Description string `gorm:"type:text" json:"description"`             // รายละเอียดเพิ่มเติม
+	Module      string `gorm:"type:varchar(50)" json:"module"`           // โมดูล เช่น "transaction", "registration"
 
 	// Relationship
-	UserID      uint      `gorm:"not null" json:"user_id"`
-	User        User      `json:"user,omitempty"`
+	UserID uint `gorm:"not null" json:"user_id"`
+	User   User `json:"user,omitempty"`
 }
 
 // DeviceLog - บันทึกข้อมูลอุปกรณ์ (ไม่ต้อง login - PDPA compliant)
 type DeviceLog struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	CreatedAt time.Time `json:"created_at"`
 
 	// Device Information (PDPA compliant - ไม่เก็บข้อมูลส่วนบุคคลที่ระบุตัวตน)
-	DeviceType  string    `gorm:"type:varchar(50)" json:"device_type"` // "mobile", "tablet", "desktop"
-	DeviceInfo  string    `gorm:"type:text" json:"device_info"` // รายละเอียดอุปกรณ์ (ไม่มีข้อมูลส่วนบุคคล)
-	Action      string    `gorm:"type:varchar(200);not null" json:"action"` // สิ่งที่ทำ เช่น "ลงทะเบียน", "ดูข้อมูล"
-	Description string    `gorm:"type:text" json:"description"` // รายละเอียด
-	Module      string    `gorm:"type:varchar(50)" json:"module"` // โมดูล เช่น "registration", "public"
-	
+	DeviceType  string `gorm:"type:varchar(50)" json:"device_type"`      // "mobile", "tablet", "desktop"
+	DeviceInfo  string `gorm:"type:text" json:"device_info"`             // รายละเอียดอุปกรณ์ (ไม่มีข้อมูลส่วนบุคคล)
+	Action      string `gorm:"type:varchar(200);not null" json:"action"` // สิ่งที่ทำ เช่น "ลงทะเบียน", "ดูข้อมูล"
+	Description string `gorm:"type:text" json:"description"`             // รายละเอียด
+	Module      string `gorm:"type:varchar(50)" json:"module"`           // โมดูล เช่น "registration", "public"
+
 	// Optional - ไม่เก็บข้อมูลที่ระบุตัวตน
-	IPAddress   string    `gorm:"type:varchar(50)" json:"ip_address"` // IP address (อาจลบส่วนสุดท้ายเพื่อความเป็นส่วนตัว)
+	IPAddress string `gorm:"type:varchar(50)" json:"ip_address"` // IP address (อาจลบส่วนสุดท้ายเพื่อความเป็นส่วนตัว)
 }

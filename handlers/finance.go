@@ -16,6 +16,7 @@ type FinanceTransactionRequest struct {
 	Description string  `json:"description"` // รายละเอียด
 	Date        string  `json:"date"`       // Format: "2006-01-02"
 	Category    string  `json:"category"`    // หมวดหมู่ เช่น "บุญบารมี", "ค่าใช้จ่ายทั่วไป"
+	ImageURL    *string `json:"image_url,omitempty"`   // URL ของภาพจาก Cloudinary (use pointer to detect empty string)
 }
 
 // GetFinanceTransactions - ดึงรายการรายรับรายจ่ายทั้งหมด (Finance System)
@@ -121,7 +122,11 @@ func CreateFinanceTransaction(c *fiber.Ctx) error {
 		Description: req.Description,
 		Date:        date,
 		Category:    req.Category,
+		ImageURL:    "",
 		UserID:      userID,
+	}
+	if req.ImageURL != nil {
+		transaction.ImageURL = *req.ImageURL
 	}
 
 	result := database.DB.Create(&transaction)
@@ -191,6 +196,10 @@ func UpdateFinanceTransaction(c *fiber.Ctx) error {
 	}
 	if req.Category != "" {
 		transaction.Category = req.Category
+	}
+	// Update image URL if provided (can be empty string to clear)
+	if req.ImageURL != nil {
+		transaction.ImageURL = *req.ImageURL
 	}
 
 	if err := database.DB.Save(&transaction).Error; err != nil {
