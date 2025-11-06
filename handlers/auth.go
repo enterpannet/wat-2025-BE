@@ -84,11 +84,8 @@ func Login(c *fiber.Ctx) error {
 	cookie.Expires = time.Now().Add(24 * time.Hour)
 	cookie.HTTPOnly = true
 
-	
-
-	
 	// Set Secure flag based on environment (true for HTTPS in production)
-	cookie.Secure = os.Getenv("COOKIE_SECURE") == "true" || 
+	cookie.Secure = os.Getenv("COOKIE_SECURE") == "true" ||
 		strings.Contains(c.Hostname(), "mostdata.site") ||
 		strings.HasPrefix(c.Protocol(), "https")
 
@@ -103,7 +100,7 @@ func Login(c *fiber.Ctx) error {
 			ID:       user.ID,
 			Username: user.Username,
 			FullName: user.FullName,
-			Roles:    user.Roles,
+			Roles:    []string(user.Roles),
 		},
 	})
 }
@@ -125,13 +122,11 @@ func Logout(c *fiber.Ctx) error {
 
 	cookie.Secure = os.Getenv("ENVIRONMENT") == "production" || os.Getenv("HTTPS_ENABLED") == "true"
 
-	
 	// Set Secure flag based on environment (true for HTTPS in production)
-	cookie.Secure = os.Getenv("COOKIE_SECURE") == "true" || 
+	cookie.Secure = os.Getenv("COOKIE_SECURE") == "true" ||
 		strings.Contains(c.Hostname(), "mostdata.site") ||
 		strings.HasPrefix(c.Protocol(), "https")
 	cookie.SameSite = "Lax"
-
 
 	c.Cookie(cookie)
 
@@ -156,7 +151,7 @@ func GetCurrentUser(c *fiber.Ctx) error {
 		ID:       user.ID,
 		Username: user.Username,
 		FullName: user.FullName,
-		Roles:    user.Roles,
+		Roles:    []string(user.Roles),
 	})
 }
 
@@ -199,7 +194,7 @@ func RegisterAdmin(c *fiber.Ctx) error {
 		})
 	}
 	// If error is not "record not found", log it but continue (database constraint will handle duplicate)
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if err != gorm.ErrRecordNotFound {
 		log.Printf("Error checking username existence: %v", err)
 		// Continue anyway, let database constraint handle duplicate
 	}
@@ -219,7 +214,7 @@ func RegisterAdmin(c *fiber.Ctx) error {
 		Password: string(hashedPassword),
 		FullName: req.FullName,
 		IsActive: true,
-		Roles:    req.Roles,
+		Roles:    models.StringArray(req.Roles),
 	}
 
 	if err := database.DB.Create(&user).Error; err != nil {
@@ -242,7 +237,7 @@ func RegisterAdmin(c *fiber.Ctx) error {
 			ID:       user.ID,
 			Username: user.Username,
 			FullName: user.FullName,
-			Roles:    user.Roles,
+			Roles:    []string(user.Roles),
 		},
 	})
 }
@@ -263,7 +258,7 @@ func GetAllUsers(c *fiber.Ctx) error {
 			ID:       user.ID,
 			Username: user.Username,
 			FullName: user.FullName,
-			Roles:    user.Roles,
+			Roles:    []string(user.Roles),
 		})
 	}
 
@@ -312,7 +307,7 @@ func UpdateUser(c *fiber.Ctx) error {
 				})
 			}
 		}
-		user.Roles = *req.Roles
+		user.Roles = models.StringArray(*req.Roles)
 	}
 
 	if err := database.DB.Save(&user).Error; err != nil {
@@ -325,7 +320,7 @@ func UpdateUser(c *fiber.Ctx) error {
 		ID:       user.ID,
 		Username: user.Username,
 		FullName: user.FullName,
-		Roles:    user.Roles,
+		Roles:    []string(user.Roles),
 	})
 }
 

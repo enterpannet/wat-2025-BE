@@ -11,11 +11,11 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 
-	Username string   `gorm:"type:varchar(50);uniqueIndex;not null" json:"username"`
-	Password string   `gorm:"type:varchar(255);not null" json:"-"` // Never send password in JSON
-	FullName string   `gorm:"type:varchar(200);not null" json:"full_name"`
-	IsActive bool     `gorm:"default:true" json:"is_active"`
-	Roles    []string `gorm:"type:text[];default:array['registration']" json:"roles"` // Can have multiple roles: ["registration", "finance"]
+	Username string      `gorm:"type:varchar(50);uniqueIndex;not null" json:"username"`
+	Password string      `gorm:"type:varchar(255);not null" json:"-"` // Never send password in JSON
+	FullName string      `gorm:"type:varchar(200);not null" json:"full_name"`
+	IsActive bool        `gorm:"default:true" json:"is_active"`
+	Roles    StringArray `gorm:"type:text[]" json:"roles"` // Can have multiple roles: ["registration", "finance"]
 }
 
 type Province struct {
