@@ -4,10 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-<<<<<<< HEAD
-=======
 	"log"
->>>>>>> 1f8af0e7b8e76f09469c7cd105804804cbc66f06
 	"os"
 	"registration-system/database"
 	"registration-system/middleware"
@@ -17,6 +14,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 type LoginRequest struct {
@@ -195,10 +193,16 @@ func RegisterAdmin(c *fiber.Ctx) error {
 
 	// Check if username already exists
 	var existingUser models.User
-	if err := database.DB.Where("username = ?", req.Username).First(&existingUser).Error; err == nil {
+	err := database.DB.Where("username = ?", req.Username).First(&existingUser).Error
+	if err == nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว",
 		})
+	}
+	// If error is not "record not found", log it but continue (database constraint will handle duplicate)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		log.Printf("Error checking username existence: %v", err)
+		// Continue anyway, let database constraint handle duplicate
 	}
 
 	// Hash password
