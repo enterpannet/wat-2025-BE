@@ -61,6 +61,7 @@ func main() {
 	public.Get("/provinces/:province_id/districts", handlers.GetDistricts)
 	public.Get("/districts/:district_id/sub-districts", handlers.GetSubDistricts)
 	public.Post("/registrations", handlers.CreateRegistration)
+	public.Post("/teacher-registrations", handlers.CreateTeacherRegistration)
 	public.Post("/device-logs", handlers.CreateDeviceLog) // บันทึกข้อมูลอุปกรณ์ (ไม่ต้อง login - PDPA compliant)
 
 	// Auth routes - สำหรับ admin login/register
@@ -77,6 +78,10 @@ func main() {
 	admin.Put("/registrations/:id", handlers.UpdateRegistration)
 	admin.Delete("/registrations/:id", handlers.DeleteRegistration)
 	admin.Put("/registrations/:id/chanting", handlers.UpdateChantingStatus)
+	admin.Get("/teacher-registrations", handlers.GetTeacherRegistrations)
+	admin.Get("/teacher-registrations/:id", handlers.GetTeacherRegistration)
+	admin.Put("/teacher-registrations/:id", handlers.UpdateTeacherRegistration)
+	admin.Delete("/teacher-registrations/:id", handlers.DeleteTeacherRegistration)
 
 	// Activity Log routes - บันทึกการทำกิจกรรม (ต้อง login)
 	admin.Get("/activity-logs", handlers.GetActivityLogs)

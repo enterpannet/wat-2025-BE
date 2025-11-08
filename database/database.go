@@ -58,6 +58,7 @@ func Migrate() {
 		&models.District{},
 		&models.SubDistrict{},
 		&models.Registration{},
+		&models.TeacherRegistration{},
 		&models.Transaction{},
 		&models.ActivityLog{},
 		&models.DeviceLog{},

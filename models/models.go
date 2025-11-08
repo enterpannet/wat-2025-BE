@@ -72,6 +72,30 @@ type Registration struct {
 	ChantedOkApan  bool `gorm:"default:false" json:"chanted_ok_apan"` // สวดออกอาพานแล้ว
 }
 
+type TeacherRegistration struct {
+	ID        uint           `gorm:"primaryKey" json:"id"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+
+	FullName  string    `gorm:"type:varchar(200);not null" json:"full_name"`
+	Nickname  string    `gorm:"type:varchar(100)" json:"nickname"`
+	BirthDate time.Time `gorm:"not null" json:"birth_date"`
+
+	ProvinceID    uint        `gorm:"not null" json:"province_id"`
+	Province      Province    `json:"province,omitempty"`
+	DistrictID    uint        `gorm:"not null" json:"district_id"`
+	District      District    `json:"district,omitempty"`
+	SubDistrictID uint        `gorm:"not null" json:"sub_district_id"`
+	SubDistrict   SubDistrict `json:"sub_district,omitempty"`
+	AddressDetail string      `gorm:"type:text;not null" json:"address_detail"`
+
+	PhoneNumber      string `gorm:"type:varchar(20);not null" json:"phone_number"`
+	TempleName       string `gorm:"type:varchar(200)" json:"temple_name"`
+	MedicalCondition string `gorm:"type:text" json:"medical_condition"`
+	Vassa            int    `gorm:"default:0" json:"vassa"`
+}
+
 // Transaction - รายรับรายจ่าย
 type Transaction struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
